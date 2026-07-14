@@ -9,6 +9,7 @@ const CHORD_TYPES = [
 ];
 const OPEN = [40,45,50,55,59,64]; // low E → high E
 let latestExport=null;
+let exportUrls=[];
 const PC = Object.fromEntries(NOTES.map((n,i)=>[n,i]));
 Object.assign(PC,{Db:1,Eb:3,Gb:6,Ab:8,Bb:10,'B#':0,'E#':5,Cb:11,Fb:4});
 const OPEN_SHAPES = {
@@ -128,6 +129,7 @@ function render(names,best,s){
   document.querySelector('#score strong').textContent=score;
   const moves=best.path.slice(1).map((v,i)=>transition(best.path[i],v)); const hardest=moves.indexOf(Math.max(...moves));
   document.querySelector('#tip').innerHTML=moves.length?`<strong>演奏のヒント：</strong> ${names[hardest]} → ${names[hardest+1]} が一番大きな移動です。次のコードを見ながら、力を抜いてまとめて移動しましょう。`:`<strong>演奏のヒント：</strong> まず各弦をゆっくり鳴らし、音詰まりがないか確認しましょう。`;
+  prepareDownloads();
 }
 function positionName(v){const p=v.frets.filter(x=>x>0);const a=p.length?p.reduce((x,y)=>x+y,0)/p.length:0;return a>=6?'ハイ':'ロー';}
 function generate(){
@@ -169,11 +171,7 @@ function variableLength(value){
   while((value>>=7))bytes.unshift((value&127)|128);
   return bytes;
 }
-function downloadBlob(data,type,filename){
-  const url=URL.createObjectURL(new Blob([data],{type})),link=document.createElement('a');
-  link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-}
-function exportMidi(){
+function createMidi(){
   if(!latestExport)return;
   const track=[0,255,81,3,7,161,32,0,192,24];
   latestExport.path.forEach(voicing=>{
@@ -183,7 +181,7 @@ function exportMidi(){
   });
   track.push(0,255,47,0);
   const length=track.length,header=[77,84,104,100,0,0,0,6,0,0,0,1,1,224],chunk=[77,84,114,107,(length>>>24)&255,(length>>>16)&255,(length>>>8)&255,length&255];
-  downloadBlob(new Uint8Array([...header,...chunk,...track]),'audio/midi','fretflow.mid');
+  return new Uint8Array([...header,...chunk,...track]);
 }
 function mscxNotes(voicing,tab=false){
   return voicing.frets.map((f,i)=>f<0?'':`<Note><pitch>${OPEN[i]+f+latestExport.capo}</pitch>${tab?`<string>${5-i}</string><fret>${f}</fret>`:''}</Note>`).join('');
@@ -192,14 +190,20 @@ function mscxMeasures(tab=false){
   return latestExport.path.map((voicing,index)=>`<Measure><voice><StaffText><text>${xmlEsc(latestExport.names[index])}</text></StaffText><Chord><durationType>whole</durationType>${mscxNotes(voicing,tab)}</Chord></voice></Measure>`).join('');
 }
 function xmlEsc(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));}
-function exportMuseScore(){
+function createMuseScore(){
   if(!latestExport)return;
   const xml=`<?xml version="1.0" encoding="UTF-8"?><museScore version="3.02"><programVersion>4.0</programVersion><Score><Division>480</Division><Part><Staff id="1"><StaffType group="pitched"/></Staff><Staff id="2"><StaffType group="tablature"><name>stdNormal</name><lines>6</lines><useNumbers>1</useNumbers></StaffType></Staff><trackName>FretFlow Guitar</trackName><Instrument><longName>Guitar</longName><shortName>Gtr.</shortName><instrumentId>pluck.guitar</instrumentId><Channel><program value="24"/></Channel><StringData><frets>24</frets><string>64</string><string>59</string><string>55</string><string>50</string><string>45</string><string>40</string></StringData></Instrument></Part><Staff id="1">${mscxMeasures(false)}</Staff><Staff id="2">${mscxMeasures(true)}</Staff></Score></museScore>`;
-  downloadBlob(xml,'application/x-musescore','fretflow.mscx');
+  return xml;
+}
+function prepareDownloads(){
+  exportUrls.forEach(url=>URL.revokeObjectURL(url));
+  const midiUrl=URL.createObjectURL(new Blob([createMidi()],{type:'audio/midi'}));
+  const mscxUrl=URL.createObjectURL(new Blob([createMuseScore()],{type:'application/x-musescore;charset=utf-8'}));
+  exportUrls=[midiUrl,mscxUrl];
+  document.querySelector('#download-midi').href=midiUrl;
+  document.querySelector('#download-mscx').href=mscxUrl;
 }
 document.querySelector('#generate').addEventListener('click',generate);
-document.querySelector('#download-midi').addEventListener('click',exportMidi);
-document.querySelector('#download-mscx').addEventListener('click',exportMuseScore);
 document.querySelector('#progression').addEventListener('keydown',e=>{if(e.key==='Enter')generate()});
 document.querySelectorAll('.examples button').forEach(b=>b.addEventListener('click',()=>{document.querySelector('#progression').value=b.dataset.value;generate()}));
 document.addEventListener('click',event=>{const button=event.target.closest('[data-chord]');if(button)addChordToProgression(button.dataset.chord);});
