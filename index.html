@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="コード進行から弾きやすいギターTAB譜を自動生成">
+  <title>FretFlow — コード進行からTAB譜を生成</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="score.css">
+</head>
+<body>
+  <div class="noise"></div>
+  <header>
+    <a class="brand" href="#"><span class="brand-mark">F</span><span>FretFlow</span></a>
+    <div class="header-note"><span></span> Guitar voicing optimizer</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">CHORD TO TAB · INSTANTLY</p>
+      <h1>コードの流れを、<br><em>指になじむ</em>フォームへ。</h1>
+      <p class="lead">前後のコード移動まで計算して、進行全体で弾きやすいTAB譜を組み立てます。</p>
+    </section>
+
+    <section class="workspace">
+      <div class="input-panel">
+        <div class="field-head">
+          <label for="progression">コード進行</label>
+          <span>スペースなしでも入力できます</span>
+        </div>
+        <div class="progression-wrap">
+          <input id="progression" value="F G Em Am" autocomplete="off" spellcheck="false" placeholder="例：F G Em Am">
+          <button id="generate" type="button">TABを生成 <span>→</span></button>
+        </div>
+        <div class="examples">
+          <span>TRY</span>
+          <button data-value="F G Em Am">F G Em Am</button>
+          <button data-value="C G Am F">C G Am F</button>
+          <button data-value="Dm7 G7 Cmaj7 A7">Dm7 G7 Cmaj7 A7</button>
+        </div>
+
+        <div class="settings-title"><span>演奏設定</span><i></i></div>
+        <div class="settings-grid">
+          <fieldset>
+            <legend>フォーム</legend>
+            <div class="segmented" id="form-setting">
+              <input type="radio" name="form" id="form-auto" value="auto" checked><label for="form-auto">おまかせ</label>
+              <input type="radio" name="form" id="form-open" value="open"><label for="form-open">開放弦あり</label>
+              <input type="radio" name="form" id="form-barre" value="barre"><label for="form-barre">セーハーのみ</label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>難易度</legend>
+            <div class="segmented">
+              <input type="radio" name="difficulty" id="easy" value="easy" checked><label for="easy">やさしい</label>
+              <input type="radio" name="difficulty" id="normal" value="normal"><label for="normal">標準</label>
+              <input type="radio" name="difficulty" id="advanced" value="advanced"><label for="advanced">上級</label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>ポジション</legend>
+            <div class="segmented">
+              <input type="radio" name="position" id="pos-auto" value="auto" checked><label for="pos-auto">自動</label>
+              <input type="radio" name="position" id="low" value="low"><label for="low">ロー</label>
+              <input type="radio" name="position" id="high" value="high"><label for="high">ハイ</label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>カポ</legend>
+            <select id="capo">
+              <option value="0">カポなし</option>
+              <option value="1">1フレット</option><option value="2">2フレット</option>
+              <option value="3">3フレット</option><option value="4">4フレット</option>
+              <option value="5">5フレット</option><option value="6">6フレット</option>
+              <option value="7">7フレット</option>
+            </select>
+          </fieldset>
+        </div>
+      </div>
+
+      <section class="output-panel" id="output" aria-live="polite">
+        <div class="output-head">
+          <div><p>OPTIMIZED TAB</p><h2>おすすめのフォーム</h2></div>
+          <div class="score" id="score"><span>弾きやすさ</span><strong>—</strong></div>
+        </div>
+        <div id="empty" class="empty-state">
+          <div class="strings-icon"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <p>コード進行を入力して<br>「TABを生成」を押してください</p>
+        </div>
+        <div id="result" hidden>
+          <div class="sheet-wrap">
+            <div class="sheet-toolbar"><span>STANDARD NOTATION + TAB</span><span id="capo-label">TUNING: E A D G B E</span></div>
+            <div class="sheet-scroller"><svg id="score-sheet" role="img" aria-label="五線譜とタブ譜"></svg></div>
+          </div>
+          <div class="legend"><span><b>0</b> 開放弦</span><span><b>×</b> ミュート</span><span><b>━━</b> セーハー</span></div>
+          <div class="diagram-head"><span>CHORD FORMS</span><h3>コードの押さえ方</h3></div>
+          <div class="cards" id="cards"></div>
+          <div class="tip" id="tip"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+  <footer><span>FRETFLOW / 2026</span><p>Standard tuning · E A D G B E</p></footer>
+  <script src="app.js"></script>
+</body>
+</html>
