@@ -1,4 +1,12 @@
 const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const NOTE_LABELS = ['C','C# / Db','D','D# / Eb','E','F','F# / Gb','G','G# / Ab','A','A# / Bb','B'];
+const CHORD_TYPES = [
+  {suffix:'',label:'メジャー'}, {suffix:'m',label:'マイナー'}, {suffix:'7',label:'セブンス'},
+  {suffix:'m7',label:'マイナーセブンス'}, {suffix:'maj7',label:'メジャーセブンス'},
+  {suffix:'sus2',label:'サスツー'}, {suffix:'sus4',label:'サスフォー'}, {suffix:'add9',label:'アドナインス'},
+  {suffix:'dim',label:'ディミニッシュ'}, {suffix:'dim7',label:'ディミニッシュセブンス'},
+  {suffix:'aug',label:'オーギュメント'}, {suffix:'m7b5',label:'マイナーセブンフラットファイブ'}
+];
 const OPEN = [40,45,50,55,59,64]; // low E → high E
 const PC = Object.fromEntries(NOTES.map((n,i)=>[n,i]));
 Object.assign(PC,{Db:1,Eb:3,Gb:6,Ab:8,Bb:10,'B#':0,'E#':5,Cb:11,Fb:4});
@@ -22,7 +30,7 @@ function parseProgression(raw){
 function chordInfo(name){
   const m=name.match(/^([A-G](?:#|b)?)(.*?)(?:\/([A-G](?:#|b)?))?$/); if(!m)return null;
   const root=PC[m[1]], q=m[2]||'';
-  let intervals=q.includes('m7b5')?[0,3,6,10]:q.startsWith('m')&&!q.startsWith('maj')?[0,3,7]:q.startsWith('dim')?[0,3,6]:q.startsWith('aug')?[0,4,8]:[0,4,7];
+  let intervals=q.includes('m7b5')?[0,3,6,10]:q==='dim7'?[0,3,6,9]:q.startsWith('m')&&!q.startsWith('maj')?[0,3,7]:q.startsWith('dim')?[0,3,6]:q.startsWith('aug')?[0,4,8]:[0,4,7];
   if(q==='7')intervals.push(10); if(q==='m7')intervals.push(10); if(/maj7|M7/.test(q))intervals.push(11);
   if(q.includes('sus2'))intervals=[0,2,7]; if(q.includes('sus4'))intervals=[0,5,7]; if(q.includes('add9'))intervals.push(2);
   return {name,root,q,tones:new Set(intervals.map(x=>(root+x)%12)),bass:m[3]?PC[m[3]]:root};
@@ -126,7 +134,38 @@ function generate(){
   const chords=names.map(n=>chordInfo(transposeForCapo(n,Number(s.capo)))).filter(Boolean),best=optimize(chords,s); render(names,best,s);
   document.querySelector('#empty').hidden=true;document.querySelector('#result').hidden=false;
 }
+function addChordToProgression(chord){
+  const input=document.querySelector('#progression'),current=input.value.trim();
+  input.value=current?`${current} ${chord}`:chord;
+  input.focus(); input.setSelectionRange(input.value.length,input.value.length);
+  document.querySelector('.app-view').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function renderChordLibrary(){
+  const rootSelect=document.querySelector('#library-root');
+  rootSelect.innerHTML=NOTES.map(note=>`<option value="${note}">${NOTE_LABELS[PC[note]]}</option>`).join('');
+  const draw=()=>{const root=rootSelect.value;document.querySelector('#chord-library-grid').innerHTML=CHORD_TYPES.map(type=>`<button class="chord-option" type="button" data-chord="${root+type.suffix}">${root+type.suffix}<small>${type.label}</small></button>`).join('');};
+  rootSelect.addEventListener('change',draw); draw();
+}
+function renderNotePicker(){
+  const picker=document.querySelector('#note-picker'),selected=new Set();
+  picker.innerHTML=NOTE_LABELS.map((label,i)=>`<button class="note-button" type="button" data-note="${i}" aria-pressed="false">${label}</button>`).join('');
+  picker.addEventListener('click',event=>{
+    const button=event.target.closest('.note-button'); if(!button)return;
+    const pc=Number(button.dataset.note); selected.has(pc)?selected.delete(pc):selected.add(pc);
+    button.setAttribute('aria-pressed',String(selected.has(pc))); renderFinderResults(selected);
+  });
+}
+function renderFinderResults(selected){
+  const result=document.querySelector('#finder-result');
+  if(selected.size<3){result.innerHTML='<p>3音以上選ぶと、候補のコードを表示します。</p>';return;}
+  const matches=[];
+  NOTES.forEach(root=>CHORD_TYPES.forEach(type=>{const name=root+type.suffix,info=chordInfo(name);if(info&&info.tones.size===selected.size&&[...info.tones].every(note=>selected.has(note)))matches.push({name,label:type.label});}));
+  result.innerHTML=matches.length?`<div class="finder-candidates">${matches.map(match=>`<button class="chord-option" type="button" data-chord="${match.name}">${match.name}<small>${match.label}</small></button>`).join('')}</div>`:'<p>選択した構成音と完全に一致する対応コードはありません。</p>';
+}
 document.querySelector('#generate').addEventListener('click',generate);
 document.querySelector('#progression').addEventListener('keydown',e=>{if(e.key==='Enter')generate()});
 document.querySelectorAll('.examples button').forEach(b=>b.addEventListener('click',()=>{document.querySelector('#progression').value=b.dataset.value;generate()}));
+document.addEventListener('click',event=>{const button=event.target.closest('[data-chord]');if(button)addChordToProgression(button.dataset.chord);});
+renderChordLibrary();
+renderNotePicker();
 generate();

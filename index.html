@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="score.css">
+  <link rel="stylesheet" href="ui.css">
 </head>
 <body>
   <div class="noise"></div>
@@ -19,13 +20,12 @@
   </header>
 
   <main>
-    <section class="hero">
-      <p class="eyebrow">CHORD TO TAB · INSTANTLY</p>
-      <h1>コードの流れを、<br><em>指になじむ</em>フォームへ。</h1>
-      <p class="lead">前後のコード移動まで計算して、進行全体で弾きやすいTAB譜を組み立てます。</p>
-    </section>
-
-    <section class="workspace">
+    <section class="app-view" aria-label="TAB譜生成">
+      <div class="section-intro">
+        <div><p class="section-kicker">TAB GENERATOR</p><h1>コード進行からTAB譜を生成</h1></div>
+        <p>コードを入力し、演奏設定を選んでください。</p>
+      </div>
+      <section class="workspace">
       <div class="input-panel">
         <div class="field-head">
           <label for="progression">コード進行</label>
@@ -101,6 +101,23 @@
           <div class="tip" id="tip"></div>
         </div>
       </section>
+      </section>
+    </section>
+
+    <section class="tool-section" id="chord-library">
+      <div class="tool-heading">
+        <div><p class="section-kicker">SUPPORTED CHORDS</p><h2>対応コード一覧</h2></div>
+        <label class="root-picker">根音 <select id="library-root" aria-label="一覧表示するコードの根音"></select></label>
+      </div>
+      <p class="tool-description">コードをクリックすると、上の入力欄へ追加できます。</p>
+      <div class="chord-library-grid" id="chord-library-grid"></div>
+    </section>
+
+    <section class="tool-section chord-finder" id="chord-finder">
+      <div class="tool-heading"><div><p class="section-kicker">CHORD FINDER</p><h2>構成音からコードを調べる</h2></div></div>
+      <p class="tool-description">鳴っている音をすべて選択してください。異名同音はまとめて表示しています。</p>
+      <div class="note-picker" id="note-picker" aria-label="構成音を選択"></div>
+      <div class="finder-result" id="finder-result" aria-live="polite"><p>3音以上選ぶと、候補のコードを表示します。</p></div>
     </section>
   </main>
   <footer><span>FRETFLOW / 2026</span><p>Standard tuning · E A D G B E</p></footer>
