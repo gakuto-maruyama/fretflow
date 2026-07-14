@@ -89,7 +89,14 @@
         <div id="empty" class="empty-state" aria-hidden="true"></div>
         <div id="result" hidden>
           <div class="sheet-wrap">
-            <div class="sheet-toolbar"><span>STANDARD NOTATION + TAB</span><span id="capo-label">TUNING: E A D G B E</span></div>
+            <div class="sheet-toolbar">
+              <span>STANDARD NOTATION + TAB</span>
+              <div class="export-actions">
+                <button id="download-midi" type="button">MIDI</button>
+                <button id="download-mscx" type="button">MuseScore</button>
+              </div>
+              <span id="capo-label">TUNING: E A D G B E</span>
+            </div>
             <div class="sheet-scroller"><svg id="score-sheet" role="img" aria-label="五線譜とタブ譜"></svg></div>
           </div>
           <div class="legend"><span><b>0</b> 開放弦</span><span><b>×</b> ミュート</span><span><b>━━</b> セーハー</span></div>

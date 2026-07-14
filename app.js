@@ -8,6 +8,7 @@ const CHORD_TYPES = [
   {suffix:'aug',label:'オーギュメント'}, {suffix:'m7b5',label:'マイナーセブンフラットファイブ'}
 ];
 const OPEN = [40,45,50,55,59,64]; // low E → high E
+let latestExport=null;
 const PC = Object.fromEntries(NOTES.map((n,i)=>[n,i]));
 Object.assign(PC,{Db:1,Eb:3,Gb:6,Ab:8,Bb:10,'B#':0,'E#':5,Cb:11,Fb:4});
 const OPEN_SHAPES = {
@@ -119,6 +120,7 @@ function optimize(chords,s){
   return dp.reduce((a,b)=>a.cost<b.cost?a:b);
 }
 function render(names,best,s){
+  latestExport={names,path:best.path,capo:Number(s.capo)};
   const sheet=scoreSvg(names,best.path,s.capo),svg=document.querySelector('#score-sheet'); svg.setAttribute('viewBox',`0 0 ${sheet.width} 290`);svg.setAttribute('width',sheet.width);svg.innerHTML=sheet.html;
   document.querySelector('#capo-label').textContent=Number(s.capo)?`CAPO ${s.capo} · E A D G B E`:'TUNING: E A D G B E';
   document.querySelector('#cards').innerHTML=best.path.map((v,i)=>`<article class="chord-card ${i===0?'active':''}"><div class="chord-card-top"><div><h3>${esc(names[i])}</h3><p>${v.type} · ${positionName(v)}</p></div><p>6 → 1弦</p></div>${diagramSvg(v)}</article>`).join('');
@@ -162,7 +164,42 @@ function renderFinderResults(selected){
   NOTES.forEach(root=>CHORD_TYPES.forEach(type=>{const name=root+type.suffix,info=chordInfo(name);if(info&&info.tones.size===selected.size&&[...info.tones].every(note=>selected.has(note)))matches.push({name,label:type.label});}));
   result.innerHTML=matches.length?`<div class="finder-candidates">${matches.map(match=>`<button class="chord-option" type="button" data-chord="${match.name}">${match.name}<small>${match.label}</small></button>`).join('')}</div>`:'<p>選択した構成音と完全に一致する対応コードはありません。</p>';
 }
+function variableLength(value){
+  const bytes=[value&127];
+  while((value>>=7))bytes.unshift((value&127)|128);
+  return bytes;
+}
+function downloadBlob(data,type,filename){
+  const url=URL.createObjectURL(new Blob([data],{type})),link=document.createElement('a');
+  link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportMidi(){
+  if(!latestExport)return;
+  const track=[0,255,81,3,7,161,32,0,192,24];
+  latestExport.path.forEach(voicing=>{
+    const pitches=voicing.frets.map((f,i)=>f<0?null:OPEN[i]+f+latestExport.capo).filter(Number.isFinite);
+    pitches.forEach(pitch=>track.push(0,144,pitch,88));
+    pitches.forEach((pitch,index)=>track.push(...variableLength(index?0:480),128,pitch,0));
+  });
+  track.push(0,255,47,0);
+  const length=track.length,header=[77,84,104,100,0,0,0,6,0,0,0,1,1,224],chunk=[77,84,114,107,(length>>>24)&255,(length>>>16)&255,(length>>>8)&255,length&255];
+  downloadBlob(new Uint8Array([...header,...chunk,...track]),'audio/midi','fretflow.mid');
+}
+function mscxNotes(voicing,tab=false){
+  return voicing.frets.map((f,i)=>f<0?'':`<Note><pitch>${OPEN[i]+f+latestExport.capo}</pitch>${tab?`<string>${5-i}</string><fret>${f}</fret>`:''}</Note>`).join('');
+}
+function mscxMeasures(tab=false){
+  return latestExport.path.map((voicing,index)=>`<Measure><voice><StaffText><text>${xmlEsc(latestExport.names[index])}</text></StaffText><Chord><durationType>whole</durationType>${mscxNotes(voicing,tab)}</Chord></voice></Measure>`).join('');
+}
+function xmlEsc(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));}
+function exportMuseScore(){
+  if(!latestExport)return;
+  const xml=`<?xml version="1.0" encoding="UTF-8"?><museScore version="3.02"><programVersion>4.0</programVersion><Score><Division>480</Division><Part><Staff id="1"><StaffType group="pitched"/></Staff><Staff id="2"><StaffType group="tablature"><name>stdNormal</name><lines>6</lines><useNumbers>1</useNumbers></StaffType></Staff><trackName>FretFlow Guitar</trackName><Instrument><longName>Guitar</longName><shortName>Gtr.</shortName><instrumentId>pluck.guitar</instrumentId><Channel><program value="24"/></Channel><StringData><frets>24</frets><string>64</string><string>59</string><string>55</string><string>50</string><string>45</string><string>40</string></StringData></Instrument></Part><Staff id="1">${mscxMeasures(false)}</Staff><Staff id="2">${mscxMeasures(true)}</Staff></Score></museScore>`;
+  downloadBlob(xml,'application/x-musescore','fretflow.mscx');
+}
 document.querySelector('#generate').addEventListener('click',generate);
+document.querySelector('#download-midi').addEventListener('click',exportMidi);
+document.querySelector('#download-mscx').addEventListener('click',exportMuseScore);
 document.querySelector('#progression').addEventListener('keydown',e=>{if(e.key==='Enter')generate()});
 document.querySelectorAll('.examples button').forEach(b=>b.addEventListener('click',()=>{document.querySelector('#progression').value=b.dataset.value;generate()}));
 document.addEventListener('click',event=>{const button=event.target.closest('[data-chord]');if(button)addChordToProgression(button.dataset.chord);});
