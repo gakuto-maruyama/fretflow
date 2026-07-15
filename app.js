@@ -183,22 +183,32 @@ function createMidi(){
   const length=track.length,header=[77,84,104,100,0,0,0,6,0,0,0,1,1,224],chunk=[77,84,114,107,(length>>>24)&255,(length>>>16)&255,(length>>>8)&255,length&255];
   return new Uint8Array([...header,...chunk,...track]);
 }
-function mscxNotes(voicing,tab=false){
-  return voicing.frets.map((f,i)=>f<0?'':`<Note><pitch>${OPEN[i]+f+latestExport.capo}</pitch>${tab?`<string>${5-i}</string><fret>${f}</fret>`:''}</Note>`).join('');
-}
-function mscxMeasures(tab=false){
-  return latestExport.path.map((voicing,index)=>`<Measure><voice><StaffText><text>${xmlEsc(latestExport.names[index])}</text></StaffText><Chord><durationType>whole</durationType>${mscxNotes(voicing,tab)}</Chord></voice></Measure>`).join('');
-}
 function xmlEsc(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));}
+function musicXmlPitch(midi){
+  const note=NOTES[midi%12];
+  return `<pitch><step>${note[0]}</step>${note.includes('#')?'<alter>1</alter>':''}<octave>${Math.floor(midi/12)-1}</octave></pitch>`;
+}
+function musicXmlNotes(voicing,staff,tab=false){
+  let first=true;
+  return voicing.frets.map((f,i)=>{
+    if(f<0)return '';
+    const chord=first?'':'<chord/>'; first=false;
+    const technical=tab?`<notations><technical><string>${6-i}</string><fret>${f}</fret></technical></notations>`:'';
+    return `<note>${chord}${musicXmlPitch(OPEN[i]+f+latestExport.capo)}<duration>4</duration><voice>1</voice><type>whole</type><staff>${staff}</staff>${technical}</note>`;
+  }).join('');
+}
+function musicXmlAttributes(){
+  return `<attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><staves>2</staves><clef number="1"><sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change></clef><staff-details number="2"><staff-type>alternate</staff-type><staff-lines>6</staff-lines><staff-tuning line="1"><tuning-step>E</tuning-step><tuning-octave>2</tuning-octave></staff-tuning><staff-tuning line="2"><tuning-step>A</tuning-step><tuning-octave>2</tuning-octave></staff-tuning><staff-tuning line="3"><tuning-step>D</tuning-step><tuning-octave>3</tuning-octave></staff-tuning><staff-tuning line="4"><tuning-step>G</tuning-step><tuning-octave>3</tuning-octave></staff-tuning><staff-tuning line="5"><tuning-step>B</tuning-step><tuning-octave>3</tuning-octave></staff-tuning><staff-tuning line="6"><tuning-step>E</tuning-step><tuning-octave>4</tuning-octave></staff-tuning></staff-details><clef number="2"><sign>TAB</sign><line>5</line></clef></attributes>`;
+}
 function createMuseScore(){
   if(!latestExport)return;
-  const xml=`<?xml version="1.0" encoding="UTF-8"?><museScore version="3.02"><programVersion>4.0</programVersion><Score><Division>480</Division><Part><Staff id="1"><StaffType group="pitched"/></Staff><Staff id="2"><StaffType group="tablature"><name>stdNormal</name><lines>6</lines><useNumbers>1</useNumbers></StaffType></Staff><trackName>FretFlow Guitar</trackName><Instrument><longName>Guitar</longName><shortName>Gtr.</shortName><instrumentId>pluck.guitar</instrumentId><Channel><program value="24"/></Channel><StringData><frets>24</frets><string>64</string><string>59</string><string>55</string><string>50</string><string>45</string><string>40</string></StringData></Instrument></Part><Staff id="1">${mscxMeasures(false)}</Staff><Staff id="2">${mscxMeasures(true)}</Staff></Score></museScore>`;
-  return xml;
+  const measures=latestExport.path.map((voicing,index)=>`<measure number="${index+1}">${index===0?musicXmlAttributes():''}<direction placement="above"><direction-type><words>${xmlEsc(latestExport.names[index])}</words></direction-type><staff>1</staff></direction>${musicXmlNotes(voicing,1)}<backup><duration>4</duration></backup>${musicXmlNotes(voicing,2,true)}</measure>`).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd"><score-partwise version="4.0"><work><work-title>FretFlow Guitar TAB</work-title></work><identification><encoding><software>FretFlow</software></encoding></identification><part-list><score-part id="P1"><part-name>Guitar</part-name><part-abbreviation>Gtr.</part-abbreviation><score-instrument id="P1-I1"><instrument-name>Acoustic Guitar (nylon)</instrument-name></score-instrument><midi-instrument id="P1-I1"><midi-channel>1</midi-channel><midi-program>25</midi-program></midi-instrument></score-part></part-list><part id="P1">${measures}</part></score-partwise>`;
 }
 function prepareDownloads(){
   exportUrls.forEach(url=>URL.revokeObjectURL(url));
   const midiUrl=URL.createObjectURL(new Blob([createMidi()],{type:'audio/midi'}));
-  const mscxUrl=URL.createObjectURL(new Blob([createMuseScore()],{type:'application/x-musescore;charset=utf-8'}));
+  const mscxUrl=URL.createObjectURL(new Blob([createMuseScore()],{type:'application/vnd.recordare.musicxml+xml;charset=utf-8'}));
   exportUrls=[midiUrl,mscxUrl];
   document.querySelector('#download-midi').href=midiUrl;
   document.querySelector('#download-mscx').href=mscxUrl;
