@@ -1,0 +1,7 @@
+# AI development instructions are intentionally local to this workspace.
+AGENTS.md
+
+# Local/editor artifacts
+.DS_Store
+Thumbs.db
+node_modules/

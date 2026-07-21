@@ -5,7 +5,7 @@ const ROOT_PATTERN = '[A-Ga-g](?:#|♯|b|♭)?';
 const CHORD_PATTERN = new RegExp(`^(${ROOT_PATTERN})(${QUALITIES.filter(Boolean).join('|')})?(?:\/(${ROOT_PATTERN}))?`);
 const SEPARATOR_PATTERN = /^[\s|｜,，→]+/;
 
-function normalizeRoot(root){
+export function normalizeRoot(root){
   return root[0].toUpperCase()+root.slice(1).replaceAll('♯','#').replaceAll('♭','b');
 }
 
@@ -33,7 +33,8 @@ export function parseProgression(raw){
 
 export function chordInfo(name){
   const match=name.match(/^([A-G](?:#|b)?)(.*?)(?:\/([A-G](?:#|b)?))?$/);
-  if(!match||PC[match[1]]===undefined)return null;
+  const supportedQualities=new Set(CHORD_TYPES.map(type=>type.suffix));
+  if(!match||PC[match[1]]===undefined||!supportedQualities.has(match[2]||'')||(match[3]&&PC[match[3]]===undefined))return null;
   const root=PC[match[1]],quality=match[2]||'';
   let intervals=quality.includes('m7b5')?[0,3,6,10]:quality==='dim7'?[0,3,6,9]:quality.startsWith('m')&&!quality.startsWith('maj')?[0,3,7]:quality.startsWith('dim')?[0,3,6]:quality.startsWith('aug')?[0,4,8]:[0,4,7];
   if(quality==='7'||quality==='m7')intervals.push(10);
@@ -46,5 +47,5 @@ export function chordInfo(name){
 
 export function transposeForCapo(name,capo){
   if(!capo)return name;
-  return name.replace(/^([A-G](?:#|b)?)/,root=>NOTES[(PC[root]-capo+12)%12]);
+  return name.replace(/^([A-G](?:#|b)?)/,root=>NOTES[((PC[root]-capo)%12+12)%12]);
 }

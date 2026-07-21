@@ -1,0 +1,10 @@
+{
+  "name": "fretflow",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check app.js && node --check js/chords.js && node --check js/voicings.js && node --check js/exporters.js && node --test",
+    "test": "node --test",
+    "test:watch": "node --test --watch"
+  }
+}

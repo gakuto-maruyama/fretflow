@@ -1,6 +1,6 @@
 import {OPEN,OPEN_SHAPES} from './music-data.js';
 
-function barreCandidates(chord){
+export function barreCandidates(chord){
   const out=[];
   if(chord.q.includes('m7b5')){
     for(let fret=1;fret<=12;fret++)if((OPEN[1]+fret)%12===chord.root)out.push({frets:[-1,fret,fret+1,fret,fret+1,-1],type:'セーハー',base:fret});
@@ -20,12 +20,12 @@ function barreCandidates(chord){
   return out;
 }
 
-function validVoicing(chord,frets){
+export function validVoicing(chord,frets){
   const heard=frets.map((fret,index)=>fret<0?null:(OPEN[index]+fret)%12).filter(value=>value!==null);
   return heard.length>=4&&heard.every(note=>chord.tones.has(note))&&heard.includes(chord.root);
 }
 
-function candidates(chord,setting){
+export function candidates(chord,setting){
   let out=[];
   const open=OPEN_SHAPES[chord.name];
   if(open&&setting.form!=='barre')out.push({frets:open,type:open.includes(0)?'オープン':'コンパクト',base:Math.min(...open.filter(value=>value>0),1)});
@@ -33,7 +33,7 @@ function candidates(chord,setting){
   return out.filter(voicing=>validVoicing(chord,voicing.frets));
 }
 
-function localCost(voicing,setting){
+export function localCost(voicing,setting){
   const used=voicing.frets.filter(value=>value>=0),positions=used.filter(value=>value>0);
   const span=positions.length?Math.max(...positions)-Math.min(...positions):0;
   let cost=span*2+used.length*.25+(voicing.type==='セーハー'?(setting.difficulty==='easy'?5:2):0);
@@ -53,6 +53,7 @@ export function transition(a,b){
 }
 
 export function optimize(chords,setting){
+  if(!chords.length)return {error:'コードが指定されていません。'};
   const lists=chords.map(chord=>candidates(chord,setting));
   const missing=lists.findIndex(list=>list.length===0);
   if(missing>=0)return {error:`${chords[missing].name} は現在の演奏設定では押さえ方を生成できません。`};

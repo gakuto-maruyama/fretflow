@@ -1,6 +1,6 @@
 import {NOTES,OPEN} from './music-data.js';
 
-function variableLength(value){
+export function variableLength(value){
   const bytes=[value&127];
   while((value>>=7))bytes.unshift((value&127)|128);
   return bytes;
@@ -18,9 +18,9 @@ export function createMidi(data){
   return new Uint8Array([77,84,104,100,0,0,0,6,0,0,0,1,1,224,77,84,114,107,(length>>>24)&255,(length>>>16)&255,(length>>>8)&255,length&255,...track]);
 }
 
-function xmlEsc(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));}
-function musicXmlPitch(midi){const note=NOTES[midi%12];return `<pitch><step>${note[0]}</step>${note.includes('#')?'<alter>1</alter>':''}<octave>${Math.floor(midi/12)-1}</octave></pitch>`;}
-function musicXmlNotes(voicing,staff,capo,tab=false){
+export function xmlEsc(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));}
+export function musicXmlPitch(midi){const note=NOTES[midi%12];return `<pitch><step>${note[0]}</step>${note.includes('#')?'<alter>1</alter>':''}<octave>${Math.floor(midi/12)-1}</octave></pitch>`;}
+export function musicXmlNotes(voicing,staff,capo,tab=false){
   let first=true;
   return voicing.frets.map((fret,index)=>{
     if(fret<0)return '';
