@@ -1,3 +1,7 @@
+import {parseProgression as parseStrictProgression, chordInfo as getChordInfo, transposeForCapo as transposeChordForCapo} from './js/chords.js';
+import {optimize as optimizeVoicings} from './js/voicings.js';
+import {createMidi as exportMidi, createMusicXml as exportMusicXml} from './js/exporters.js';
+
 const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const NOTE_LABELS = ['C','C# / Db','D','D# / Eb','E','F','F# / Gb','G','G# / Ab','A','A# / Bb','B'];
 const CHORD_TYPES = [
@@ -133,10 +137,24 @@ function render(names,best,s){
 }
 function positionName(v){const p=v.frets.filter(x=>x>0);const a=p.length?p.reduce((x,y)=>x+y,0)/p.length:0;return a>=6?'ハイ':'ロー';}
 function generate(){
-  const names=parseProgression(document.querySelector('#progression').value); if(!names.length){alert('コードを入力してください（例：F G Em Am）');return;}
+  clearInputError();
+  const parsed=parseStrictProgression(document.querySelector('#progression').value);
+  if(parsed.error){showInputError(parsed.error);return;}
+  const names=parsed.names;
   const s={form:document.querySelector('[name=form]:checked').value,difficulty:document.querySelector('[name=difficulty]:checked').value,position:document.querySelector('[name=position]:checked').value,capo:document.querySelector('#capo').value};
-  const chords=names.map(n=>chordInfo(transposeForCapo(n,Number(s.capo)))).filter(Boolean),best=optimize(chords,s); render(names,best,s);
+  const chords=names.map(n=>getChordInfo(transposeChordForCapo(n,Number(s.capo))));
+  const best=optimizeVoicings(chords,s);
+  if(best.error){showInputError(best.error);return;}
+  render(names,best,s);
   document.querySelector('#empty').hidden=true;document.querySelector('#result').hidden=false;
+}
+function showInputError(message){
+  const input=document.querySelector('#progression'),error=document.querySelector('#progression-error');
+  input.setAttribute('aria-invalid','true'); error.textContent=message; error.hidden=false; input.focus();
+}
+function clearInputError(){
+  const input=document.querySelector('#progression'),error=document.querySelector('#progression-error');
+  input.removeAttribute('aria-invalid'); error.textContent=''; error.hidden=true;
 }
 function addChordToProgression(chord){
   const input=document.querySelector('#progression'),current=input.value.trim();
@@ -207,14 +225,15 @@ function createMuseScore(){
 }
 function prepareDownloads(){
   exportUrls.forEach(url=>URL.revokeObjectURL(url));
-  const midiUrl=URL.createObjectURL(new Blob([createMidi()],{type:'audio/midi'}));
-  const mscxUrl=URL.createObjectURL(new Blob([createMuseScore()],{type:'application/vnd.recordare.musicxml+xml;charset=utf-8'}));
+  const midiUrl=URL.createObjectURL(new Blob([exportMidi(latestExport)],{type:'audio/midi'}));
+  const mscxUrl=URL.createObjectURL(new Blob([exportMusicXml(latestExport)],{type:'application/vnd.recordare.musicxml+xml;charset=utf-8'}));
   exportUrls=[midiUrl,mscxUrl];
   document.querySelector('#download-midi').href=midiUrl;
   document.querySelector('#download-mscx').href=mscxUrl;
 }
 document.querySelector('#generate').addEventListener('click',generate);
 document.querySelector('#progression').addEventListener('keydown',e=>{if(e.key==='Enter')generate()});
+document.querySelector('#progression').addEventListener('input',clearInputError);
 document.querySelectorAll('.examples button').forEach(b=>b.addEventListener('click',()=>{document.querySelector('#progression').value=b.dataset.value;generate()}));
 document.addEventListener('click',event=>{const button=event.target.closest('[data-chord]');if(button)addChordToProgression(button.dataset.chord);});
 renderChordLibrary();

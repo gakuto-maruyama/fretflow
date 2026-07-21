@@ -32,3 +32,6 @@ header{height:60px}
 .finder-candidates{grid-template-columns:repeat(5,1fr)}
 @media(max-width:850px){.app-view{height:auto;min-height:0}.app-view .workspace{grid-template-columns:1fr}.app-view .output-panel{min-height:500px}.chord-library-grid{grid-template-columns:repeat(3,1fr)}.note-picker{grid-template-columns:repeat(6,1fr)}.finder-candidates{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:560px){.section-intro{align-items:start;flex-direction:column;gap:5px}.tool-section{padding:55px 0}.chord-library-grid,.finder-candidates{grid-template-columns:repeat(2,1fr)}.tool-heading{align-items:start;flex-direction:column}.note-picker{grid-template-columns:repeat(4,1fr)}}
+.progression-wrap:has(input[aria-invalid="true"]){border-color:var(--orange);box-shadow:0 0 0 2px var(--orange)}
+.input-error{margin:9px 0 0;color:#b72d13;font-size:12px;font-weight:600;line-height:1.5}
+.input-error[hidden]{display:none}

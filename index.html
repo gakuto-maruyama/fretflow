@@ -32,9 +32,10 @@
           <span>スペースなしでも入力できます</span>
         </div>
         <div class="progression-wrap">
-          <input id="progression" value="F G Em Am" autocomplete="off" spellcheck="false" placeholder="例：F G Em Am">
+          <input id="progression" value="F G Em Am" autocomplete="off" spellcheck="false" placeholder="例：F G Em Am" aria-describedby="progression-error">
           <button id="generate" type="button">TABを生成 <span>→</span></button>
         </div>
+        <p class="input-error" id="progression-error" role="alert" hidden></p>
         <div class="examples">
           <span>TRY</span>
           <button data-value="F G Em Am">F G Em Am</button>
@@ -125,6 +126,6 @@
     </section>
   </main>
   <footer><span>FRETFLOW / 2026</span><p>Standard tuning · E A D G B E</p></footer>
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
