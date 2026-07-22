@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="score.css">
+  <link rel="stylesheet" href="score.css?v=2">
   <link rel="stylesheet" href="ui.css">
 </head>
 <body>
@@ -98,7 +98,7 @@
               </div>
               <span id="capo-label">TUNING: E A D G B E</span>
             </div>
-            <div class="sheet-scroller"><canvas id="score-sheet" role="img" aria-label="五線譜とタブ譜">五線譜とタブ譜を表示するにはCanvas対応ブラウザが必要です。</canvas></div>
+            <div class="sheet-scroller"><div id="score-sheet" class="score-sheet" role="img" aria-label="五線譜とタブ譜"></div></div>
           </div>
           <div class="legend"><span><b>0</b> 開放弦</span><span><b>×</b> ミュート</span><span><b>━━</b> セーハー</span></div>
           <div class="diagram-head"><span>CHORD FORMS</span><h3>コードの押さえ方</h3></div>
@@ -126,6 +126,6 @@
     </section>
   </main>
   <footer><span>FRETFLOW / 2026</span><p>Standard tuning · E A D G B E</p></footer>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=2"></script>
 </body>
 </html>

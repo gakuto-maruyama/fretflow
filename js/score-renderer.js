@@ -4,6 +4,7 @@ const CELL_WIDTH=112;
 const SCORE_HEIGHT=290;
 const STAFF_BOTTOM=95;
 const STAFF_STEP=5;
+const STAFF_LINES=[55,65,75,85,95];
 const TAB_LINES=[167,181,195,209,223,237];
 const LETTER_INDEX={C:0,D:1,E:2,F:3,G:4,A:5,B:6};
 
@@ -19,52 +20,53 @@ export function pitchLayout(midi){
   return {step:diatonic-reference,accidental:note.includes('#')?'♯':''};
 }
 
-function line(ctx,x1,y1,x2,y2,width=1,color='#34362f'){
-  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.lineWidth=width;ctx.strokeStyle=color;ctx.stroke();
+function ledgerPositions(step){
+  const positions=[];
+  if(step<=-2)for(let ledger=-2;ledger>=step;ledger-=2)positions.push(STAFF_BOTTOM-ledger*STAFF_STEP);
+  if(step>=10)for(let ledger=10;ledger<=step;ledger+=2)positions.push(STAFF_BOTTOM-ledger*STAFF_STEP);
+  return positions;
 }
 
-function ledgerLines(ctx,x,y,step){
-  if(step<=-2)for(let ledger=-2;ledger>=step;ledger-=2)line(ctx,x-10,STAFF_BOTTOM-ledger*STAFF_STEP,x+10,STAFF_BOTTOM-ledger*STAFF_STEP);
-  if(step>=10)for(let ledger=10;ledger<=step;ledger+=2)line(ctx,x-10,STAFF_BOTTOM-ledger*STAFF_STEP,x+10,STAFF_BOTTOM-ledger*STAFF_STEP);
-}
-
-export function drawScore(canvas,names,path,capo=0){
-  const {width,height}=scoreDimensions(names.length);
-  const ratio=Math.max(1,globalThis.devicePixelRatio||1);
-  canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);
-  canvas.style.width=`${width}px`;canvas.style.height=`${height}px`;
-  const ctx=canvas.getContext('2d');
-  ctx.setTransform(ratio,0,0,ratio,0,0);
-  ctx.fillStyle='#faf9f3';ctx.fillRect(0,0,width,height);
-  ctx.textAlign='center';ctx.textBaseline='alphabetic';
-
-  [55,65,75,85,95].forEach(y=>line(ctx,42,y,width-24,y));
-  TAB_LINES.forEach(y=>line(ctx,42,y,width-24,y,.7));
-  line(ctx,42,55,42,95,2,'#171914');line(ctx,42,167,42,237,2,'#171914');
-  ctx.fillStyle='#171914';ctx.font='bold 45px serif';ctx.fillText('𝄞',24,89);
-  ctx.font='500 9px sans-serif';ctx.fillText('8',25,101);
-  ctx.font='500 18px monospace';ctx.fillText('TAB',22,207);
-
-  names.forEach((name,index)=>{
+export function scoreLayout(names,path,capo=0){
+  const dimensions=scoreDimensions(names.length);
+  const measures=names.map((name,index)=>{
     const center=82+index*CELL_WIDTH,voicing=path[index];
-    ctx.fillStyle='#171914';ctx.font='600 15px monospace';ctx.fillText(name,center,30);
     const pitches=voicing.frets.map((fret,string)=>fret<0?null:OPEN[string]+fret+Number(capo)).filter(Number.isFinite);
-    pitches.forEach((midi,noteIndex)=>{
-      const x=center+(noteIndex%3-1)*6;
-      const {step,accidental}=pitchLayout(midi),y=STAFF_BOTTOM-step*STAFF_STEP;
-      ledgerLines(ctx,x,y,step);
-      if(accidental){ctx.font='15px serif';ctx.textAlign='right';ctx.fillText(accidental,x-7,y+5);ctx.textAlign='center';}
-      ctx.save();ctx.translate(x,y);ctx.rotate(-Math.PI/10);ctx.beginPath();ctx.ellipse(0,0,6,4,0,0,Math.PI*2);ctx.fill();ctx.restore();
-    });
-    [5,4,3,2,1,0].forEach((string,row)=>{
-      const fret=voicing.frets[string],value=fret<0?'×':String(fret),y=TAB_LINES[row];
-      ctx.fillStyle='#faf9f3';ctx.fillRect(center-11,y-8,22,16);
-      ctx.fillStyle='#171914';ctx.font='500 11px monospace';ctx.fillText(value,center,y+4);
-    });
-    line(ctx,center+CELL_WIDTH/2,55,center+CELL_WIDTH/2,95,1,'#77796f');
-    line(ctx,center+CELL_WIDTH/2,167,center+CELL_WIDTH/2,237,1,'#77796f');
+    return {
+      name,center,barline:center+CELL_WIDTH/2,
+      notes:pitches.map((midi,noteIndex)=>{
+        const x=center+(noteIndex%3-1)*6,{step,accidental}=pitchLayout(midi);
+        return {x,y:STAFF_BOTTOM-step*STAFF_STEP,step,accidental,ledgers:ledgerPositions(step)};
+      }),
+      tabs:[5,4,3,2,1,0].map((string,row)=>({x:center,y:TAB_LINES[row],value:voicing.frets[string]<0?'×':String(voicing.frets[string])}))
+    };
   });
-  ctx.textAlign='left';ctx.fillStyle='#77796f';ctx.font='8px monospace';
-  ctx.fillText('4/4  ·  LET RING  ·  FRET NUMBERS ARE RELATIVE TO CAPO',42,268);
-  return {width,height};
+  return {...dimensions,staffLines:[...STAFF_LINES],tabLines:[...TAB_LINES],measures};
+}
+
+function element(className,text=''){
+  const node=document.createElement('span');node.className=className;node.textContent=text;return node;
+}
+
+function position(node,left,top){node.style.left=`${left}px`;node.style.top=`${top}px`;return node;}
+
+export function drawScore(root,names,path,capo=0){
+  const layout=scoreLayout(names,path,capo);
+  root.replaceChildren();root.style.width=`${layout.width}px`;root.style.height=`${layout.height}px`;
+  layout.staffLines.forEach(y=>root.append(position(element('notation-line staff-line'),42,y)));
+  layout.tabLines.forEach(y=>root.append(position(element('notation-line tab-line'),42,y)));
+  root.append(position(element('notation-bar'),42,55),position(element('notation-tab-bar'),42,167));
+  root.append(position(element('notation-clef','𝄞'),7,48),position(element('notation-octave','8'),21,91),position(element('notation-tab-label','TAB'),5,188));
+  layout.measures.forEach(measure=>{
+    root.append(position(element('notation-chord-name',measure.name),measure.center,16));
+    measure.notes.forEach(note=>{
+      note.ledgers.forEach(y=>root.append(position(element('notation-ledger'),note.x,y)));
+      if(note.accidental)root.append(position(element('notation-accidental',note.accidental),note.x-15,note.y-10));
+      root.append(position(element('notation-note'),note.x,note.y));
+    });
+    measure.tabs.forEach(tab=>root.append(position(element('notation-fret',tab.value),tab.x,tab.y)));
+    root.append(position(element('notation-measure-bar'),measure.barline,55),position(element('notation-tab-measure-bar'),measure.barline,167));
+  });
+  root.append(position(element('notation-footer','4/4  ·  LET RING  ·  FRET NUMBERS ARE RELATIVE TO CAPO'),42,260));
+  return layout;
 }

@@ -45,6 +45,15 @@ function convert(input,output,generated=output){
 
 try{
   convert(inputPath,scorePath);
+  const unpacked=spawnSync('tar',['-xOf',scorePath,'imported.mscx'],{encoding:'utf8',timeout:10000,windowsHide:true});
+  assert.equal(unpacked.error,undefined,unpacked.error?.message);
+  assert.equal(unpacked.status,0,`MSCZ内部の検査に失敗しました。\n${unpacked.stderr||unpacked.stdout}`);
+  const imported=unpacked.stdout;
+  assert.match(imported,/<Instrument id="guitar-nylon">/);
+  assert.match(imported,/<instrumentId>pluck\.guitar\.nylon-string<\/instrumentId>/);
+  assert.match(imported,/<minPitchP>40<\/minPitchP>/);
+  assert.match(imported,/<maxPitchP>83<\/maxPitchP>/);
+  assert.doesNotMatch(imported,/<Instrument id="(?:soprano-guitar|cavaquinho)">/);
   convert(scorePath,imageRequestPath,imagePath);
   convert(scorePath,svgPath);
   const rendered=readFileSync(svgPath,'utf8');

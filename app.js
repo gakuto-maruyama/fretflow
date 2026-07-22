@@ -1,7 +1,7 @@
 import {parseProgression as parseStrictProgression, chordInfo as getChordInfo, transposeForCapo as transposeChordForCapo} from './js/chords.js';
 import {optimize as optimizeVoicings} from './js/voicings.js';
-import {createMidi as exportMidi, createMusicXml as exportMusicXml} from './js/exporters.js';
-import {drawScore} from './js/score-renderer.js';
+import {createMidi as exportMidi, createMusicXml as exportMusicXml} from './js/exporters.js?v=2';
+import {drawScore} from './js/score-renderer.js?v=2';
 
 const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const NOTE_LABELS = ['C','C# / Db','D','D# / Eb','E','F','F# / Gb','G','G# / Ab','A','A# / Bb','B'];

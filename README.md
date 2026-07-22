@@ -27,7 +27,7 @@ python -m http.server 8000
 - `js/chords.js`: コード進行の検証、コード構成音、カポ移調
 - `js/voicings.js`: 運指候補の生成と進行全体の最適化
 - `js/exporters.js`: MIDI / MusicXML の生成
-- `js/score-renderer.js`: Canvasによる五線譜・TAB譜の描画座標と描画処理
+- `js/score-renderer.js`: HTML/CSSによる五線譜・TAB譜の描画座標と描画処理
 
 ## テスト
 
