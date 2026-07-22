@@ -1,6 +1,7 @@
 import {parseProgression as parseStrictProgression, chordInfo as getChordInfo, transposeForCapo as transposeChordForCapo} from './js/chords.js';
 import {optimize as optimizeVoicings} from './js/voicings.js';
 import {createMidi as exportMidi, createMusicXml as exportMusicXml} from './js/exporters.js';
+import {drawScore} from './js/score-renderer.js';
 
 const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const NOTE_LABELS = ['C','C# / Db','D','D# / Eb','E','F','F# / Gb','G','G# / Ab','A','A# / Bb','B'];
@@ -89,27 +90,6 @@ function transition(a,b){
   return sum/Math.max(n,1)+Math.abs(center(ac)-center(bc))*1.4;
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function scoreSvg(names,path,capo){
-  const cell=112,w=Math.max(520,80+cell*names.length), staff=[55,65,75,85,95], tab=[167,181,195,209,223,237];
-  let x=`<rect width="${w}" height="290" fill="#faf9f3"/>`;
-  [...staff,...tab].forEach(y=>x+=`<line x1="42" y1="${y}" x2="${w-24}" y2="${y}" stroke="#34362f" stroke-width="${tab.includes(y)?.7:1}"/>`);
-  x+=`<line x1="42" y1="55" x2="42" y2="95" stroke="#171914" stroke-width="2"/><line x1="42" y1="167" x2="42" y2="237" stroke="#171914" stroke-width="2"/>`;
-  x+=`<text x="8" y="86" font-family="serif" font-size="45" font-weight="bold">𝄞</text><text x="8" y="207" font-size="19" font-weight="500">TAB</text>`;
-  names.forEach((name,i)=>{
-    const cx=82+i*cell, v=path[i];
-    x+=`<text x="${cx}" y="30" text-anchor="middle" font-size="15" font-weight="600">${esc(name)}</text>`;
-    const pitches=v.frets.map((f,si)=>f<0?null:OPEN[si]+f+Number(capo)).filter(Boolean);
-    pitches.forEach((p,j)=>{const nx=cx+(j%3-1)*5,y=92-(p-60)*2.5;
-      if(y>100)for(let ly=105;ly<=y+2;ly+=10)x+=`<line x1="${nx-9}" y1="${ly}" x2="${nx+9}" y2="${ly}" stroke="#34362f" stroke-width="1"/>`;
-      if(y<50)for(let ly=45;ly>=y-2;ly-=10)x+=`<line x1="${nx-9}" y1="${ly}" x2="${nx+9}" y2="${ly}" stroke="#34362f" stroke-width="1"/>`;
-      x+=`<ellipse cx="${nx}" cy="${y}" rx="6" ry="4" transform="rotate(-18 ${nx} ${y})" fill="#171914"/>`;
-    });
-    [5,4,3,2,1,0].forEach((si,row)=>{const f=v.frets[si],val=f<0?'×':f; x+=`<rect x="${cx-11}" y="${tab[row]-8}" width="22" height="16" rx="2" fill="#faf9f3"/><text x="${cx}" y="${tab[row]+4}" text-anchor="middle" font-size="11" font-weight="500">${val}</text>`;});
-    x+=`<line x1="${cx+cell/2}" y1="55" x2="${cx+cell/2}" y2="95" stroke="#77796f"/><line x1="${cx+cell/2}" y1="167" x2="${cx+cell/2}" y2="237" stroke="#77796f"/>`;
-  });
-  x+=`<text x="42" y="268" font-size="8" fill="#77796f">4/4  ·  LET RING  ·  FRET NUMBERS ARE RELATIVE TO CAPO</text>`;
-  return {html:x,width:w};
-}
 function diagramSvg(v){
   const played=v.frets.filter(f=>f>0), min=played.length?Math.min(...played):1, start=Math.max(1,Math.min(min,9)), visible=v.frets.map(f=>f<=0?f:f-start+1);
   let x=`<svg class="chord-diagram" viewBox="0 0 118 145" aria-label="コードダイアグラム">`;
@@ -126,7 +106,7 @@ function optimize(chords,s){
 }
 function render(names,best,s){
   latestExport={names,path:best.path,capo:Number(s.capo)};
-  const sheet=scoreSvg(names,best.path,s.capo),svg=document.querySelector('#score-sheet'); svg.setAttribute('viewBox',`0 0 ${sheet.width} 290`);svg.setAttribute('width',sheet.width);svg.innerHTML=sheet.html;
+  drawScore(document.querySelector('#score-sheet'),names,best.path,Number(s.capo));
   document.querySelector('#capo-label').textContent=Number(s.capo)?`CAPO ${s.capo} · E A D G B E`:'TUNING: E A D G B E';
   document.querySelector('#cards').innerHTML=best.path.map((v,i)=>`<article class="chord-card ${i===0?'active':''}"><div class="chord-card-top"><div><h3>${esc(names[i])}</h3><p>${v.type} · ${positionName(v)}</p></div><p>6 → 1弦</p></div>${diagramSvg(v)}</article>`).join('');
   const score=Math.max(52,Math.min(98,Math.round(100-best.cost/(names.length||1)*2.4)));
@@ -183,45 +163,6 @@ function renderFinderResults(selected){
   const matches=[];
   NOTES.forEach(root=>CHORD_TYPES.forEach(type=>{const name=root+type.suffix,info=chordInfo(name);if(info&&info.tones.size===selected.size&&[...info.tones].every(note=>selected.has(note)))matches.push({name,label:type.label});}));
   result.innerHTML=matches.length?`<div class="finder-candidates">${matches.map(match=>`<button class="chord-option" type="button" data-chord="${match.name}">${match.name}<small>${match.label}</small></button>`).join('')}</div>`:'<p>選択した構成音と完全に一致する対応コードはありません。</p>';
-}
-function variableLength(value){
-  const bytes=[value&127];
-  while((value>>=7))bytes.unshift((value&127)|128);
-  return bytes;
-}
-function createMidi(){
-  if(!latestExport)return;
-  const track=[0,255,81,3,7,161,32,0,192,24];
-  latestExport.path.forEach(voicing=>{
-    const pitches=voicing.frets.map((f,i)=>f<0?null:OPEN[i]+f+latestExport.capo).filter(Number.isFinite);
-    pitches.forEach(pitch=>track.push(0,144,pitch,88));
-    pitches.forEach((pitch,index)=>track.push(...variableLength(index?0:480),128,pitch,0));
-  });
-  track.push(0,255,47,0);
-  const length=track.length,header=[77,84,104,100,0,0,0,6,0,0,0,1,1,224],chunk=[77,84,114,107,(length>>>24)&255,(length>>>16)&255,(length>>>8)&255,length&255];
-  return new Uint8Array([...header,...chunk,...track]);
-}
-function xmlEsc(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));}
-function musicXmlPitch(midi){
-  const note=NOTES[midi%12];
-  return `<pitch><step>${note[0]}</step>${note.includes('#')?'<alter>1</alter>':''}<octave>${Math.floor(midi/12)-1}</octave></pitch>`;
-}
-function musicXmlNotes(voicing,staff,tab=false){
-  let first=true;
-  return voicing.frets.map((f,i)=>{
-    if(f<0)return '';
-    const chord=first?'':'<chord/>'; first=false;
-    const technical=tab?`<notations><technical><string>${6-i}</string><fret>${f}</fret></technical></notations>`:'';
-    return `<note>${chord}${musicXmlPitch(OPEN[i]+f+latestExport.capo)}<duration>4</duration><voice>1</voice><type>whole</type><staff>${staff}</staff>${technical}</note>`;
-  }).join('');
-}
-function musicXmlAttributes(){
-  return `<attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><staves>2</staves><clef number="1"><sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change></clef><staff-details number="2"><staff-type>alternate</staff-type><staff-lines>6</staff-lines><staff-tuning line="1"><tuning-step>E</tuning-step><tuning-octave>2</tuning-octave></staff-tuning><staff-tuning line="2"><tuning-step>A</tuning-step><tuning-octave>2</tuning-octave></staff-tuning><staff-tuning line="3"><tuning-step>D</tuning-step><tuning-octave>3</tuning-octave></staff-tuning><staff-tuning line="4"><tuning-step>G</tuning-step><tuning-octave>3</tuning-octave></staff-tuning><staff-tuning line="5"><tuning-step>B</tuning-step><tuning-octave>3</tuning-octave></staff-tuning><staff-tuning line="6"><tuning-step>E</tuning-step><tuning-octave>4</tuning-octave></staff-tuning></staff-details><clef number="2"><sign>TAB</sign><line>5</line></clef></attributes>`;
-}
-function createMuseScore(){
-  if(!latestExport)return;
-  const measures=latestExport.path.map((voicing,index)=>`<measure number="${index+1}">${index===0?musicXmlAttributes():''}<direction placement="above"><direction-type><words>${xmlEsc(latestExport.names[index])}</words></direction-type><staff>1</staff></direction>${musicXmlNotes(voicing,1)}<backup><duration>4</duration></backup>${musicXmlNotes(voicing,2,true)}</measure>`).join('');
-  return `<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd"><score-partwise version="4.0"><work><work-title>FretFlow Guitar TAB</work-title></work><identification><encoding><software>FretFlow</software></encoding></identification><part-list><score-part id="P1"><part-name>Guitar</part-name><part-abbreviation>Gtr.</part-abbreviation><score-instrument id="P1-I1"><instrument-name>Acoustic Guitar (nylon)</instrument-name></score-instrument><midi-instrument id="P1-I1"><midi-channel>1</midi-channel><midi-program>25</midi-program></midi-instrument></score-part></part-list><part id="P1">${measures}</part></score-partwise>`;
 }
 function prepareDownloads(){
   exportUrls.forEach(url=>URL.revokeObjectURL(url));

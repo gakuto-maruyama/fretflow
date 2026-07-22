@@ -9,7 +9,6 @@ header{height:60px}
 .app-view .workspace{min-height:0;flex:1;margin-bottom:0;align-items:stretch}
 .app-view .input-panel,.app-view .output-panel{padding:24px;overflow-y:auto}
 .app-view .empty-state{min-height:300px;height:calc(100% - 62px)}
-.app-view .sheet-scroller svg{height:250px}
 .app-view .sheet-toolbar{height:38px;gap:10px}
 .export-actions{display:flex;gap:5px;margin-left:auto}
 .export-actions a{border:1px solid #aaa;background:transparent;color:#34362f;padding:4px 8px;font:500 8px "DM Mono";cursor:pointer;text-decoration:none}

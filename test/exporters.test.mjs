@@ -47,7 +47,16 @@ test('createMusicXml: 小節数、コード名エスケープ、2段譜を生成
   assert.match(xml,/<clef number="2"><sign>TAB<\/sign>/);
   assert.ok(xml.indexOf('<clef number="2">')<xml.indexOf('<staff-details number="2">'));
   assert.doesNotMatch(xml,/<capo>/);
-  assert.match(xml,/<staff-tuning line="1"><tuning-step>F<\/tuning-step><tuning-octave>2<\/tuning-octave>/);
+  assert.match(xml,/<staff-tuning line="1"><tuning-step>E<\/tuning-step><tuning-octave>4<\/tuning-octave>/);
+  assert.match(xml,/<pitch><step>F<\/step><octave>4<\/octave><\/pitch>/);
   assert.match(xml,/<words>Capo 1<\/words>/);
   assert.match(xml,/<string>5<\/string><fret>3<\/fret>/);
+});
+
+test('createMusicXml: 標準ギターの楽器情報とTAB弦順を明示する',()=>{
+  const xml=createMusicXml(data);
+  assert.match(xml,/<instrument-name>Acoustic Guitar \(nylon\)<\/instrument-name>/);
+  assert.match(xml,/<instrument-sound>pluck\.guitar\.nylon-string<\/instrument-sound>/);
+  assert.match(xml,/<staff-tuning line="1"><tuning-step>E<\/tuning-step><tuning-octave>4<\/tuning-octave>/);
+  assert.match(xml,/<staff-tuning line="6"><tuning-step>E<\/tuning-step><tuning-octave>2<\/tuning-octave>/);
 });
