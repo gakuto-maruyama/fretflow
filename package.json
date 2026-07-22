@@ -5,6 +5,8 @@
   "scripts": {
     "check": "node --check app.js && node --check js/chords.js && node --check js/voicings.js && node --check js/exporters.js && node --test",
     "test": "node --test",
+    "test:musescore": "node scripts/musescore-smoke.mjs",
+    "test:musescore:visual": "node scripts/musescore-smoke.mjs --keep-output",
     "test:watch": "node --test --watch"
   }
 }

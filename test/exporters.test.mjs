@@ -22,6 +22,12 @@ test('createMidi: 有効なヘッダーとトラック長を生成',()=>{
   assert.deepEqual([...createMidi(data).slice(0,22)],[...midi.slice(0,22)]);
 });
 
+test('createMidi: 1和音を4/4拍子の1小節分保持する',()=>{
+  const midi=createMidi(data);
+  const firstNoteOff=22+10+(voicing.frets.filter(fret=>fret>=0).length*4);
+  assert.deepEqual([...midi.slice(firstNoteOff,firstNoteOff+3)],variableLength(1920).concat(128));
+});
+
 test('XML補助関数: 特殊文字・半音・オクターブ・TAB情報を処理',()=>{
   assert.equal(xmlEsc(`<C & "D">`),'&lt;C &amp; &quot;D&quot;&gt;');
   assert.equal(musicXmlPitch(60),'<pitch><step>C</step><octave>4</octave></pitch>');
@@ -34,8 +40,14 @@ test('XML補助関数: 特殊文字・半音・オクターブ・TAB情報を処
 test('createMusicXml: 小節数、コード名エスケープ、2段譜を生成',()=>{
   const xml=createMusicXml({names:['C&','G'],path:[voicing,{frets:[3,2,0,0,0,3]}],capo:1});
   assert.match(xml,/^<\?xml/);
+  assert.doesNotMatch(xml,/<!DOCTYPE/);
   assert.equal((xml.match(/<measure /g)||[]).length,2);
   assert.match(xml,/C&amp;/);
   assert.match(xml,/<staves>2<\/staves>/);
   assert.match(xml,/<clef number="2"><sign>TAB<\/sign>/);
+  assert.ok(xml.indexOf('<clef number="2">')<xml.indexOf('<staff-details number="2">'));
+  assert.doesNotMatch(xml,/<capo>/);
+  assert.match(xml,/<staff-tuning line="1"><tuning-step>F<\/tuning-step><tuning-octave>2<\/tuning-octave>/);
+  assert.match(xml,/<words>Capo 1<\/words>/);
+  assert.match(xml,/<string>5<\/string><fret>3<\/fret>/);
 });
